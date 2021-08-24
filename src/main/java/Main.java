@@ -1,5 +1,7 @@
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import org.apache.http.HttpEntity;
 import org.apache.http.HttpHeaders;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -8,12 +10,10 @@ import org.apache.http.entity.ContentType;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 
-import java.io.*;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.List;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.Scanner;
 
 public class Main {
@@ -36,23 +36,21 @@ public class Main {
         request.setHeader(HttpHeaders.ACCEPT, ContentType.APPLICATION_JSON.getMimeType());
 
         CloseableHttpResponse response = httpClient.execute(request);
-
-//        Arrays.stream(response.getAllHeaders()).forEach(System.out::println);
-//        String body = new String(response.getEntity().getContent().readAllBytes(), StandardCharsets.UTF_8);
-
         NasaApodResponse apod = apodMapper.readValue(response.getEntity().getContent(), NasaApodResponse.class);
+
+//        NasaApodResponse apod = new GsonBuilder().create().fromJson(
+//                response.getEntity().getContent().toString(), NasaApodResponse.class);
+
+
         System.out.println(apod);
-
-        saveDescription(apod, "");
-
-//        apod.saveDescription("");
-//        apod.saveLowResImage("");
-//        apod.saveHiResImage("");
+        obtainDescription(apod, "");
+        saveImage(httpClient, apod.getUrl(), "");
+        saveImage(httpClient, apod.getHdUrl(), "");
 
     }
 
-    public static void saveDescription(NasaApodResponse apod, String whereToSave) {
-        String nameToSave = apod.namePatternForFiles() + " - description.txt";
+    public static void obtainDescription(NasaApodResponse apod, String whereToSave) {
+        String nameToSave = "NASA picture of a day " + apod.getDate() + " - description.txt";
         String savePath = whereToSave + (whereToSave.isBlank() ? "" : "\\") + nameToSave;   //?
         File save = new File(savePath);
 
@@ -66,7 +64,7 @@ public class Main {
                     "Перезаписать? ('+' для подтверждения)");
             Scanner input = new Scanner(System.in);
             if (!input.nextLine().equals("+")) {
-                System.out.println("Описание не сохранено.");
+                System.out.println("Пояснение повторно не скачено.");
                 return;
             }
         }
@@ -76,33 +74,39 @@ public class Main {
         } catch (IOException e) {
             System.out.println("Ошибка сохранения " + nameToSave + ". " + e.getMessage());
         }
+        System.out.println("Файл " + nameToSave + " сохранён в " +
+                (whereToSave.isBlank() ? " папке проекта." : whereToSave));
+        System.out.println();
     }
 
-    public static void saveLowResImage(NasaApodResponse apod, String whereToSave) {
-        String nameToSave = apod.namePatternForFiles() + " - low resolution.jpg";
+    public static void saveImage(CloseableHttpClient connection, String fromWhereToSave, String whereToSave) throws IOException {
+        String nameToSave = fromWhereToSave.substring(fromWhereToSave.lastIndexOf("/") + 1);
         String savePath = whereToSave + (whereToSave.isBlank() ? "" : "\\") + nameToSave;
         File save = new File(savePath);
-//        try
-//        {
-//            URL imageURL = new URL(apod.getUrl());
-//            HttpURLConnection imageConnection;
-//            imageConnection = (HttpURLConnection) imageURL.openConnection();
-//            imageConnection.setRequestMethod("GET");
-//            imageConnection.connect();
-//
-//            InputStream in = imageConnection.getInputStream();
-//            OutputStream writer = new FileOutputStream(save);
-//            byte[] buffer = new byte[buffSize];
-//            int c = in.read(buffer);
-//            while (c > 0) {
-//                writer.write(buffer, 0, c);
-//                c = in.read(buffer);
-//            }
-//            writer.flush();
-//            writer.close();
-//            in.close();
-//        } catch (Exception e) {
-//            System.out.println(e);
-//        }
+        if (save.exists()) {
+            System.out.println("Файл " + nameToSave + " уже существует.\n" +
+                    "Перезаписать? ('+' для подтверждения)");
+            Scanner input = new Scanner(System.in);
+            if (!input.nextLine().equals("+")) {
+                System.out.println("Повторное скачивание отменено.");
+                return;
+            }
+            if (save.delete())
+                System.out.println("Прежний файл " + nameToSave + " удалён.");
+        }
+
+        HttpEntity entity = connection.execute(new HttpGet(fromWhereToSave)).getEntity();
+        if (entity != null) {
+            FileOutputStream fos = new FileOutputStream(save);
+            entity.writeTo(fos);
+            fos.close();
+        } else {
+            System.out.println("Данных для сохранения не получено :(");
+            return;
+        }
+        System.out.println("Файл " + nameToSave + " сохранён в " +
+                (whereToSave.isBlank() ? " папке проекта." : whereToSave));
+        System.out.println();
     }
+
 }

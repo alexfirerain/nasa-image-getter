@@ -1,18 +1,13 @@
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.Scanner;
-
 public class NasaApodResponse {
-    private String  date,
-            explanation,
-            hdUrl,
-            mediaType,
-            serviceVersion,
-            title,
-            url;
+    final private String  date,
+                          explanation,
+                          hdUrl,
+                          mediaType,
+                          serviceVersion,
+                          title,
+                          url;
 
     public String getDate() {
         return date;
@@ -24,14 +19,6 @@ public class NasaApodResponse {
 
     public String getHdUrl() {
         return hdUrl;
-    }
-
-    public String getMediaType() {
-        return mediaType;
-    }
-
-    public String getServiceVersion() {
-        return serviceVersion;
     }
 
     public String getTitle() {
@@ -63,7 +50,9 @@ public class NasaApodResponse {
     public String toString() {
         return ("""
                
-               * * * * * NASA Astronomical Picture Of a Day * * * * * *
+               * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+                 * * * * NASA Astronomical Picture Of a Day * * * * *
+               * * * * * * * * * * * * * * * * * * * * * * * * * * * *
                *
                *\t<версия сервиса: %5$s; тип медиа: %4$s>
                *
@@ -77,49 +66,6 @@ public class NasaApodResponse {
                 
                 """)
                 .formatted(date, explanation, hdUrl, mediaType, serviceVersion, title, url);
-    }
-
-    public String namePatternForFiles() {
-        return "NASA picture of a day " + date;
-    }
-
-    public void saveDescription(String dirToSave) {
-        String nameToSave = namePatternForFiles() + " - description.txt";
-        String savePath = dirToSave + (dirToSave.isBlank() ? "" : "\\") + nameToSave;
-        File save = new File(savePath);
-
-        StringBuilder content = new StringBuilder()
-                .append("\t# # # ").append(title).append(" # # #\r\n")
-                .append("a picture of ").append(date).append("\r\n\r\n")
-                .append(explanation).append("\r\n");
-
-        if (save.exists()) {
-            System.out.println("Файл " + nameToSave + " уже существует.\n" +
-            "Перезаписать? ('+' для подтверждения)");
-            Scanner input = new Scanner(System.in);
-            if (!input.nextLine().equals("+")) {
-                System.out.println("Описание не сохранено.");
-                return;
-            }
-        }
-        try (FileWriter writer = new FileWriter(savePath, false)) {
-            writer.write(content.toString());
-            writer.flush();
-        } catch (IOException e) {
-            System.out.println("Ошибка сохранения " + nameToSave + ". " + e.getMessage());
-        }
-    }
-
-    public void saveLowResImage(String dirToSave) {
-        String nameToSave = namePatternForFiles() + " - low resolution.jpg";
-        String savePath = dirToSave + (dirToSave.isBlank() ? "" : "\\") + nameToSave;
-        File save = new File(savePath);
-    }
-
-    public void saveHiResImage(String dirToSave) {
-        String nameToSave = namePatternForFiles() + " - high resolution.jpg";
-        String savePath = dirToSave + (dirToSave.isBlank() ? "" : "\\") + nameToSave;
-        File save = new File(savePath);
     }
 
 }
